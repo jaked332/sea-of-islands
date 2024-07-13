@@ -2,7 +2,7 @@
 class DataLoader:
 
     @staticmethod
-    def get_island_graph():
+    def get_island_edges():
         return [
             {"from": "Hawaii", "to": "Tahiti", "travel_time": 15},
             {"from": "Tahiti", "to": "Hawaii", "travel_time": 15},
