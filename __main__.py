@@ -28,10 +28,14 @@ for e in edges:
 
 print(f"\n\nLeader Knowledge Sharing\n")
 
-# Plan the leader routes (knowledge sharing)
-for start_vertex in populations.keys():
-    route = leader_route_plan(graph, populations, start_vertex)
+recent_visits = {}
+for island in populations:
+    recent_visits[island] = 0
 
-    print(f"Leader from {start_vertex}")
+# Plan the leader routes (knowledge sharing)
+for island in populations:
+    route = leader_route_plan(graph, populations, recent_visits, island)
+
+    print(f"Leader from {island}")
     print(" => ".join(route))
     print()
