@@ -1,4 +1,5 @@
 import heapq
+from collections import deque
 
 
 def shortest_path(graph, populations, start_island, alpha=1):
@@ -38,24 +39,11 @@ def shortest_path(graph, populations, start_island, alpha=1):
     return shortest_distances
 
 
-def leader_route_plan(graph, populations, recency, home_island):
+def leader_route_plan(graph, populations, recency, skills, home_island):
     """Find an efficient route for a leader to share knowledge with
-    Other islands. Considering shortest path, population, recency.
-
-    Route determination algorithm:
-
-    1. Initialize the route and visited set to track the visited islands.
-    2. Set the current node to the starting vertex and explore other
-    verticies than have not been visited.
-    3. While not all the destination islands have been visited:
-        a. Add the current node to the visited set and route
-        b. Update the last island visit time for the current
-        c. Get the shortest path using the custom Dijkstra's
-        d. Consider the smallest distance with the constraints
-        e. Set the next node as the current node in the search
-    4. Return the optimal leader route.
+    other islands. Considering shortest path, population, recency, and skills.
     """
-    
+
     route = []
     visited = set()
 
@@ -72,23 +60,74 @@ def leader_route_plan(graph, populations, recency, home_island):
         distances = shortest_path(graph, populations, current_node)
         next_node = None
 
-        min_distance = float('inf')
+        min_score = float('inf')
 
         for node in populations:
             if node not in visited:
                 recency_priority = current_time - recency[node]
                 max_recent_visit = max(recency.values())
                 
-                updated_distance = distances[node] * (1 + recency_priority
-                    / (max_recent_visit if max_recent_visit > 0 else 1))
+                skill_priority = len(skills[home_island] - skills[node])
                 
-                if updated_distance < min_distance:
-                    min_distance = updated_distance
+                score = (distances[node] * 
+                         (1 + recency_priority / (max_recent_visit if max_recent_visit > 0 else 1)) /
+                         (1 + skill_priority))
+                
+                if score < min_score:
+                    min_score = score
                     next_node = node      
         
         if next_node is None:
             break
 
         current_node = next_node
+        skills[current_node] = skills[current_node].union(skills[home_island])
 
     return route
+
+
+def bfs_paths(graph, start):
+    """BFS to find shortest paths from the start node to all other nodes.
+    """
+
+    queue = deque([(start, [])])
+    visited = set()
+    paths = {start: []}
+    
+    while queue:
+        current, path = queue.popleft()
+        
+        if current not in visited:
+            visited.add(current)
+            
+            for neighbor, travel_time in graph[current]:
+                if neighbor not in visited:
+                    paths[neighbor] = path + [(current, neighbor)]
+                    queue.append((neighbor, path + [(current, neighbor)]))
+    
+    return paths
+
+
+def distribute_resources(graph, start_island, resource_quantity, canoe_capacity):
+    """Distribute resources from the start island to the other islands.
+    """
+    
+    resources_distribution = {island: 0 for island in graph}
+    paths = bfs_paths(graph, start_island)
+    
+    remaining_quantity = resource_quantity
+
+    for island in paths:
+        if island == start_island:
+            continue
+        
+        path = paths[island]
+        for u, v in path:
+            if remaining_quantity <= 0:
+                break
+            
+            quantity_for_segment = min(remaining_quantity, canoe_capacity - resources_distribution[v])
+            resources_distribution[v] += quantity_for_segment
+            remaining_quantity -= quantity_for_segment
+    
+    return resources_distribution
